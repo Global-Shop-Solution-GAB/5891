@@ -1,0 +1,150 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..Create
+Gui.Form..Size(15360,10695)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MousePointer(0)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form.gsGrid.Create(GsGridControl)
+Gui.Form.gsGrid.Size(14670,9705)
+Gui.Form.gsGrid.Position(255,225)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+v.Global.iRefresh_Rate.Declare
+Program.External.Include.Library("GCG_5891_Check_Create_Folder.lib")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+
+'BN, Dec 27, 2018
+'This project will create trueview web pages that is similar with the screen: On Line System > View > Current Work in Progress (No Dollars)
+'User will maintain the selection in this script: Department + Employee Group (Employee_MSTR.Pr_Balance_Group) + Shift + DisplayNotClockedIn
+'The Maintenance program will be run from On Line System > Administration > Maintenance - Current WO in Progress Trueview - 5891
+'The TrueView one time open will be run from On Line System > View > TrueView - Current WO in Progress (No Dollars) - 5891
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sRet.Declare
+	v.Local.iSleep.Declare
+	v.Local.sNow.Declare
+	v.Local.iMinuteUnload.Declare
+	v.Local.sStandAlone.Declare
+	v.Local.iPIDReturn.Declare
+	V.Local.iStopTime.Declare
+	v.Local.bNum.Declare
+	v.Local.sIsSomeOneRunning.Declare
+	v.Local.dLastYes.Declare
+	v.Local.sPID.Declare
+	v.Local.bEx.Declare
+	v.Local.sHold.Declare
+	
+	f.Intrinsic.Control.CallSub("checkTable")
+	f.Intrinsic.Control.CallSub("Check_and_Create_Custom_Folder")
+	
+	f.ODBC.Connection!conx.OpenCompanyConnection(1000)
+	
+	f.ODBC.Connection!conx.ExecuteAndReturn("Select * from GCG_5891_Selection",v.Local.sRet)
+	f.Intrinsic.Control.If(v.Ambient.ExecuteAndReturnEOF)
+		f.ODBC.Connection!conx.Execute("Insert into GCG_5891_Selection (BalGroup,Shift,RefreshTime,Dept,DisplayNotClockedIn) values ('AllGroup','AllShift','300','AllDept','No')")
+	f.Intrinsic.Control.EndIf	
+
+	'Loop based on the iSleep time. Condition to stop: if past 11pm, then unload, or if switch = 'O' (run once from a custom menu item setup with switch 'O') then unload.
+	F.Intrinsic.Control.Do			
+		'Get Refresh Time or set default refresh time to 300
+		f.ODBC.Connection!conx.ExecuteAndReturn("Select Top 1 RefreshTime from GCG_5891_Selection",v.Local.sRet)
+		f.Intrinsic.Control.If(v.Local.sRet,=,"")
+			v.Global.iRefresh_Rate.Set(300000)
+		f.Intrinsic.Control.Else
+			f.Intrinsic.Math.Mult(v.Local.sRet,1000,v.Global.iRefresh_Rate)
+		f.Intrinsic.Control.EndIf
+	
+		'Check the time and see if it is past 11:57 pm for Carwil as they work around the clock. The maintenance will be reloaded at 12:00 am
+		f.Intrinsic.String.Format(v.Ambient.Now,"HHMMSS",v.Local.sNow)
+		v.Local.iMinuteUnload.Set(v.Local.sNow.left4)
+		
+		'Get Stop time
+		F.Global.Registry.ReadValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,5,"",V.Local.sRet)
+		f.Intrinsic.Control.If(v.Local.sRet,<>,"")
+			'Check stop time numeric
+			f.Intrinsic.Math.IsNumeric(v.Local.sRet,v.Local.bNum)			
+			f.Intrinsic.Control.If(v.Local.bNum)				
+				v.Local.iStopTime.Set(v.Local.sRet)
+				f.Intrinsic.Control.If(v.Local.iStopTime,>,2350,or,v.Local.iStopTime,<,10)
+					'set default as 2345
+					F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,False,"2345",False,0,-999.0,1/1/1980,12:00:00 AM)
+					v.Local.iStopTime.Set(2345)
+				f.Intrinsic.Control.EndIf	
+			f.Intrinsic.Control.Else
+				'set default as 2345
+				F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,False,"2345",False,0,-999.0,1/1/1980,12:00:00 AM)
+				v.Local.iStopTime.Set(2345)
+			f.Intrinsic.Control.EndIf			
+
+		f.Intrinsic.Control.Else
+			'Blank stoptime in registry, set default as 2345
+			F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,False,"2345",False,0,-999.0,1/1/1980,12:00:00 AM)
+			v.Local.iStopTime.Set(2345)
+		f.Intrinsic.Control.EndIf
+		
+		'Check to stop or not
+		f.Intrinsic.Control.If(v.Local.iMinuteUnload,>=,2345)
+			f.Intrinsic.Control.CallSub("Unload")			
+		F.Intrinsic.Control.Else
+		
+			'Call Alone programe to generate HTML. We have to call another script to run then unload for each instance of web page. In the past, we have the GCG_5891_generate_HTML.g2u took care of the processing, but some customers has issue of culmulating RAM, it seemed the datatable was closed but it was not actually disposed, so caused the memory leak.
+			'Check if some other instance is running to avoid overlaping
+			F.Global.Registry.ReadValue("SUPERVSR",V.Caller.CompanyCode,"ONERUNNING",5891,"2002",5,"",V.Local.sIsSomeOneRunning)	
+			f.Intrinsic.String.Split(v.Local.sIsSomeOneRunning.Trim,"*!*",v.Local.sHold)
+			v.Local.sPID.Set(v.Local.sHold(0).Trim)
+			f.Intrinsic.Task.PIDRunning(v.Local.sPID,v.Local.bEx)
+			f.Intrinsic.Control.If(v.Local.bEx,=,True,and,v.Local.sPID.Trim,<>,"")
+				f.Intrinsic.UI.Sleep(30)
+			f.Intrinsic.Control.else
+				f.Intrinsic.String.Build("{0}\GCG_5891_Alone.g2u",v.Caller.GasDir,v.Local.sStandAlone)
+				function.Global.General.CallASyncGAS(v.Local.sStandAlone,v.Global.iRefresh_Rate,v.Local.iPIDReturn)		
+			f.Intrinsic.Control.EndIf
+
+			'This is to run once if lauched from a custom menu item with switch 'O'
+			F.Intrinsic.Control.If(V.Caller.Switches,=,"O")
+				f.Intrinsic.Control.CallSub("Unload")
+			F.Intrinsic.Control.EndIf				
+			f.Intrinsic.Math.Div(v.Global.iRefresh_Rate,1000,v.Local.iSleep)		
+			F.Intrinsic.UI.Sleep(v.Local.iSleep)			
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Loop
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)	
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+f.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	f.Intrinsic.Control.If(v.ODBC.conx.State,=,1)
+		F.ODBC.Connection!conX.close
+	f.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Unload.End
+
+Program.Sub.Form_UnLoad.Start
+f.Intrinsic.Control.CallSub("Unload")
+Program.Sub.Form_UnLoad.End
+
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$0
+${$6$}$bnguyen$}$20200212154645728$}$tqzwddZCkmoVRWHEL6DZymEEseDhOdziCzRbrpTX9LVjuB0e85y3g72xVbQW03Y9M/FYB8T2FGc=
+Program.Sub.Comments.End
