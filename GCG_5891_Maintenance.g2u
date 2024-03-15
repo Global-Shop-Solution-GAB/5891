@@ -1,0 +1,339 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..create
+Gui.Form..caption("5891 WO in Progress Maintenance")
+Gui.Form..size(6375,7935)
+Gui.Form..minx(0)
+Gui.Form..miny(0)
+Gui.Form..position(0,0)
+Gui.Form..event(UnLoad,Form_UnLoad)
+Gui.Form..forecolor(0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..maxbutton(False)
+Gui.Form..mousepointer(0)
+Gui.Form..sizeable(False)
+Gui.Form.lbl4.create(label,"Group",True,1170,255,1,1125,165,True,0,Arial,8,-2147483633,0)
+Gui.Form.lbl4.defaultvalue("")
+Gui.Form.lbl5.create(label,"Shift",True,570,255,1,3750,165,True,0,Arial,8,-2147483633,0)
+Gui.Form.lbl5.defaultvalue("")
+Gui.Form.cmdAdd.create(button)
+Gui.Form.cmdAdd.caption("Add")
+Gui.Form.cmdAdd.size(855,375)
+Gui.Form.cmdAdd.position(90,810)
+Gui.Form.cmdAdd.event(Click,cmdAdd_Click)
+Gui.Form.cmdAdd.defaultvalue("")
+Gui.Form.cmdAdd.tabstop(True)
+Gui.Form.cmdAdd.tabindex(5)
+Gui.Form.ddlShift.Create(DropDownList)
+Gui.Form.ddlShift.Size(690,330)
+Gui.Form.ddlShift.Position(3750,390)
+Gui.Form.ddlShift.TabStop(True)
+Gui.Form.ddlShift.TabIndex(3)
+Gui.Form.ddlGroup.Create(DropDownList)
+Gui.Form.ddlGroup.Size(2535,330)
+Gui.Form.ddlGroup.Position(1125,390)
+Gui.Form.ddlGroup.TabStop(True)
+Gui.Form.ddlGroup.TabIndex(2)
+Gui.Form.gsSel.Create(GsGridControl)
+Gui.Form.gsSel.Size(5985,4710)
+Gui.Form.gsSel.Position(90,1290)
+Gui.Form.gsSel.TabStop(True)
+Gui.Form.gsSel.TabIndex(8)
+Gui.Form.gsSel.Event(RowCellClick,gsSel_RowCellClick)
+Gui.Form.cmdSave.Create(Button)
+Gui.Form.cmdSave.Size(855,375)
+Gui.Form.cmdSave.Position(90,6870)
+Gui.Form.cmdSave.TabStop(True)
+Gui.Form.cmdSave.TabIndex(7)
+Gui.Form.cmdSave.Caption("Save")
+Gui.Form.cmdSave.DefaultValue("")
+Gui.Form.cmdSave.Event(Click,cmdSave_Click)
+Gui.Form.ddlDept.Create(DropDownList)
+Gui.Form.ddlDept.Size(930,330)
+Gui.Form.ddlDept.Position(90,390)
+Gui.Form.ddlDept.TabStop(True)
+Gui.Form.ddlDept.TabIndex(1)
+Gui.Form.lbl6.Create(Label,"Department",True,1935,255,1,90,165,True,0,"Arial",8,-2147483633,0)
+Gui.Form.lbl6.DefaultValue("")
+Gui.Form.txtRefreshTime.Create(TextBox,"120",True,840,300,0,90,6420,True,1,"Arial",8,-2147483643,1)
+Gui.Form.txtRefreshTime.TabStop(True)
+Gui.Form.txtRefreshTime.TabIndex(6)
+Gui.Form.txtRefreshTime.NumericOnly(2)
+Gui.Form.lbl1.Create(Label,"Refresh Interval (secs)",True,1845,255,0,90,6210,True,0,"Arial",8,-2147483633,0)
+Gui.Form.ddlDisplayNotClockedIn.Create(DropDownList)
+Gui.Form.ddlDisplayNotClockedIn.Size(1590,330)
+Gui.Form.ddlDisplayNotClockedIn.Position(4515,390)
+Gui.Form.ddlDisplayNotClockedIn.TabStop(True)
+Gui.Form.ddlDisplayNotClockedIn.TabIndex(4)
+Gui.Form.lbl7.Create(Label,"Display Not Logged In",True,1980,255,1,4500,165,True,0,"Arial",8,-2147483633,0)
+Gui.Form.lbl7.DefaultValue("")
+Gui.Form.txtStopRefreshTime.Create(TextBox,"",True,570,300,0,2025,6435,True,0,"Arial",8,-2147483643,1)
+Gui.Form.txtStopRefreshTime.MaxLength(4)
+Gui.Form.txtStopRefreshTime.NumericOnly(2)
+Gui.Form.lbl2.Create(Label,"Stop Refreshing at",True,1575,255,0,1980,6210,True,0,"Arial",8,-2147483633,0)
+Gui.Form.lbl3.Create(Label,"(ex: 2345 for 1145pm)",True,2115,255,0,2670,6510,True,0,"Arial",8,-2147483633,0)
+Gui.Form.cmdResetToken.Create(Button)
+Gui.Form.cmdResetToken.Size(2100,375)
+Gui.Form.cmdResetToken.Position(2010,6885)
+Gui.Form.cmdResetToken.Caption("Reset Registry Token")
+Gui.Form.cmdResetToken.Event(Click,cmdResetToken_Click)
+Gui.Form.cmdResetTokenHelp.Create(Button)
+Gui.Form.cmdResetTokenHelp.Size(510,375)
+Gui.Form.cmdResetTokenHelp.Position(4185,6885)
+Gui.Form.cmdResetTokenHelp.Caption("?")
+Gui.Form.cmdResetTokenHelp.Event(Click,cmdResetTokenHelp_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.External.Include.Library("GCG_5891_Check_Create_Folder.lib")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'BN, Dec 27, 2018
+'This project will create trueview web pages that is similar with the screen: On Line System > View > Current Work in Progress (No Dollars)
+'User will maintain the selection in this script: Department + Employee Group (Employee_MSTR.Pr_Balance_Group) + Shift + DisplayNotClockedIn
+'This program will be run from On Line System > Administration > Maintenance - Current WO in Progress Trueview - 5891
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sRet.Declare
+	v.Local.iCnt.Declare		
+	
+	'Call subs from lib
+	f.Intrinsic.Control.CallSub("Check_and_Create_Custom_Folder")
+	f.Intrinsic.Control.CallSub("checkTable")
+	
+	f.ODBC.Connection!conx.OpenCompanyConnection
+	f.ODBC.Connection!conx.ExecuteAndReturn("Select * from GCG_5891_Selection",v.Local.sRet)
+	f.Intrinsic.Control.If(v.Ambient.ExecuteAndReturnEOF)
+		f.ODBC.Connection!conx.Execute("Insert into GCG_5891_Selection (BalGroup,Shift,RefreshTime,Dept,DisplayNotClockedIn) values ('AllGroup','AllShift','120','AllDept','No')")
+	f.Intrinsic.Control.EndIf
+	
+	'Department dropdown
+	gui.Form.ddlDept.AddItem("All")
+	F.ODBC.Connection!conx.ExecuteAndReturn("SELECT DISTINCT ltrim(rtrim(DEPT_EMPLOYEE)) as Dept_Employee FROM EMPLOYEE_MSTR ORDER BY DEPT_EMPLOYEE",v.Local.sRet)
+	f.Intrinsic.String.Split(v.Local.sRet,"#$#",v.Local.sRet)
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.Local.sRet.UBound,1)
+		Gui.Form.ddlDept.AddItem(v.Local.sRet(v.Local.iCnt))
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	'Group dropdown
+	gui.Form.ddlGroup.AddItem("All")
+	F.ODBC.Connection!conx.ExecuteAndReturn("select ltrim(rtrim(Bal_Group)) + ' - ' + rtrim(Descr) as BalGroup from BALANCING_GROUP order by Bal_Group",v.Local.sRet)
+	f.Intrinsic.String.Split(v.Local.sRet,"#$#",v.Local.sRet)
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.Local.sRet.UBound,1)
+		Gui.Form.ddlGroup.AddItem(v.Local.sRet(v.Local.iCnt))
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	'Shift dropdown
+	gui.Form.ddlShift.AddItem("All")
+	F.ODBC.Connection!conx.ExecuteAndReturn("select Distinct shift as Shift from employee_shift order by shift",v.Local.sRet)
+	f.Intrinsic.String.Split(v.Local.sRet,"#$#",v.Local.sRet)
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.Local.sRet.UBound,1)
+		Gui.Form.ddlShift.AddItem(v.Local.sRet(v.Local.iCnt))
+	f.Intrinsic.Control.Next(v.Local.iCnt)	
+	'DisplayNotClockedIn
+	gui.Form.ddlDisplayNotClockedIn.AddItem("No")
+	gui.Form.ddlDisplayNotClockedIn.AddItem("Yes")
+	gui.Form.ddlDisplayNotClockedIn.ListIndex(0)
+	'Set default list index
+	gui.Form.ddlDept.ListIndex(0)
+	gui.Form.ddlGroup.ListIndex(0)
+	gui.Form.ddlShift.ListIndex(0)
+	gui.Form.ddlDisplayNotClockedIn.ListIndex(0)
+	f.Intrinsic.Control.CallSub("Bind_Grid")
+	'Get Stop Time
+	F.Global.Registry.ReadValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,5,"",V.Local.sRet)
+	f.Intrinsic.Control.If(v.Local.sRet,<>,"")
+		Gui.Form.txtStopRefreshTime.Text(v.Local.sRet)
+	f.Intrinsic.Control.Else
+		F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,False,"2345",False,0,-999.0,1/1/1980,12:00:00 AM)
+		GUI.Form.txtStopRefreshTime.Text("2345")
+	f.Intrinsic.Control.EndIf
+	
+	gui.Form..Show
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Form_UnLoad.Start
+f.Intrinsic.Control.CallSub("Unload")
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.Unload.Start
+f.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	f.Intrinsic.Control.If(v.ODBC.conx.State,=,1)
+		F.ODBC.Connection!conX.close
+	f.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Unload.End
+
+Program.Sub.cmdAdd_Click.Start
+f.Intrinsic.Control.Try
+	v.Local..BulkDeclareString(sError,sDept,sGroup,sShift,sFilter)
+	
+	'Change label to ALL.. for avoiding SQL keyword All
+	f.Intrinsic.Control.If(v.Screen.Form!ddlDept.Text.Trim,=,"All")
+		v.Local.sDept.Set("AllDept")
+	f.Intrinsic.Control.Else
+		v.Local.sDept.Set(v.Screen.Form!ddlDept.Text.Trim)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.If(v.Screen.Form!ddlGroup.Text.Trim,=,"All")
+		v.Local.sGroup.Set("AllGroup")
+	f.Intrinsic.Control.Else
+		f.Intrinsic.String.Split(v.Screen.Form!ddlGroup.Text.Trim,"-",v.Local.sGroup)
+		v.Local.sGroup.Set(v.Local.sGroup(0).Trim)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.If(v.Screen.Form!ddlShift.Text.Trim,=,"All")
+		v.Local.sShift.Set("AllShift")
+	f.Intrinsic.Control.Else
+		v.Local.sShift.Set(v.Screen.Form!ddlShift.Text.Trim)
+	f.Intrinsic.Control.EndIf	
+		
+	'Check if Selection exists
+	f.Intrinsic.String.Build("Dept = '{0}' and BalGroup = '{1}' and Shift = '{2}' and DisplayNotClockedIn = '{3}'",v.Local.sDept,v.Local.sGroup,v.Local.sShift,v.Screen.Form!ddlDisplayNotClockedIn.Text.Trim,v.Local.sFilter)
+	f.Data.DataView.Create("Sel","SelDV",22,v.Local.sFilter,"")
+	f.Intrinsic.Control.If(v.DataView.Sel!SelDV.RowCount,>,0)
+		f.Intrinsic.UI.Msgbox("Selection already exists.")
+	f.Intrinsic.Control.Else
+		f.Data.DataTable.AddRow("Sel","Dept",v.Local.sDept,"BalGroup",v.Local.sGroup,"Shift",v.Local.sShift,"RefreshTime",v.Screen.Form!txtRefreshTime.Text.Trim,"DisplayNotClockedIn",v.Screen.Form!ddlDisplayNotClockedIn.Text.Trim,"Delete","Delete")
+	f.Intrinsic.Control.EndIf
+	f.Data.DataView.Close("Sel","SelDV")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+
+Program.Sub.cmdAdd_Click.End
+
+Program.Sub.cmdSave_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.iStopTime.Declare
+	
+	f.Intrinsic.Control.If(v.Screen.Form!txtRefreshTime.Text,<,120)
+		f.Intrinsic.UI.Msgbox("Minimum refresh time must be greater than 120")
+		gui.Form.txtRefreshTime.Text("120")
+		f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.If(v.Screen.Form!txtStopRefreshTime.Text.Trim,=,"")
+		f.Intrinsic.UI.Msgbox("Please enter stop time in military time, for example you should input 2345 for 11:45pm.","Attention")
+		gui.Form.txtStopRefreshTime.SetFocus
+		f.Intrinsic.Control.ExitSub		
+	f.Intrinsic.Control.EndIf
+	
+	v.Local.iStopTime.Set(v.Screen.Form!txtStopRefreshTime.Text)
+	f.Intrinsic.Control.If(v.Local.iStopTime,>,2350,or,v.Local.iStopTime,<,10)
+		f.Intrinsic.UI.Msgbox("Stop time range must be in range [0010,2350]","Attention")
+		f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf
+	F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"STOPTIME",5891,1001,False,v.Screen.Form!txtStopRefreshTime.Text.Trim,False,0,-999.0,1/1/1980,12:00:00 AM)
+	
+	f.ODBC.Connection!conx.Execute("Delete from GCG_5891_Selection")
+	f.Data.DataTable.SetValue("Sel",-1,"RefreshTime",v.Screen.Form!txtRefreshTime.Text.Trim)
+	f.Data.DataTable.SaveToDB("Sel","conx","GCG_5891_Selection","",128,"Dept@!@Dept*!*BalGroup@!@BalGroup*!*Shift@!@Shift*!*RefreshTime@!@RefreshTime*!*DisplayNotClockedIn@!@DisplayNotClockedIn")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdSave_Click.End
+
+Program.Sub.Bind_Grid.Start
+'Bind GCG_5891_Selection to the Grid
+f.Intrinsic.Control.Try
+	v.Local..BulkDeclareString(sError)	
+	
+	f.Intrinsic.Control.If(v.DataTable.Sel.Exists)
+		f.Data.DataTable.Close("Sel")		
+	f.Intrinsic.Control.EndIf
+	f.Data.DataTable.CreateFromSQL("Sel","conx","Select ltrim(rtrim(Dept)) as Dept,ltrim(rtrim(BalGroup)) as BalGroup,Shift,RefreshTime,rtrim(DisplayNotClockedIn) as DisplayNotClockedIn  From GCG_5891_Selection order by Dept,BalGroup,Shift,RefreshTime",True)
+	f.Data.DataTable.AddColumn("Sel","Delete","string","Delete")	
+	gui.Form.gsSel.AddGridviewFromDatatable("GVMain","Sel")
+	gui.Form.gsSel.SuspendLayout()
+	gui.Form.gsSel.SetColumnProperty("GvMain","DisplayNotClockedIn","Caption","Display Not Clocked In")
+	gui.Form.gsSel.SetColumnProperty("GvMain","DisplayNotClockedIn","MinWidth","100")	
+	gui.Form.gsSel.SetColumnProperty("GvMain","Delete","Width","30")
+	gui.Form.gsSel.SetColumnProperty("GvMain","Shift","Width","30")
+	gui.Form.gsSel.SetColumnProperty("GvMain","RefreshTime","Width","60")
+	gui.Form.gsSel.SetColumnProperty("GvMain","DisplayNotClockedIn","Width","25")
+	gui.Form.gsSel.SetColumnProperty("GvMain","BalGroup","MaxWidth","60")
+	gui.Form.gsSel.SetColumnProperty("GvMain","Dept","MaxWidth","60")
+	gui.Form.gsSel.SetColumnProperty("GvMain","BalGroup","Caption","Group")
+	gui.Form.gsSel.SetColumnProperty("GvMain","RefreshTime","Caption","Refresh Time")
+	gui.Form.gsSel.SetColumnProperty("GvMain","RefreshTime","Visible",False)
+	gui.Form.gsSel.SetColumnProperty("GvMain","Delete","ReadOnly",True)
+	gui.Form.gsSel.SetColumnProperty("GvMain","Delete","AllowEdit",False)
+	gui.Form.gsSel.ColumnEdit("GvMain","Delete","EditorButton","Delete")
+	gui.Form.gsSel.SetColumnProperty("GvMain","Delete","HeaderHAlignment","Center")
+	gui.Form.gsSel.ResumeLayout()
+	gui.Form.gsSel.MainView("GvMain")
+	f.Intrinsic.Control.If(v.DataTable.Sel.RowCount,>,0)
+		gui.Form.txtRefreshTime.Text(v.DataTable.Sel(0).RefreshTime!FieldValString)
+	f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.Bind_Grid.End
+
+Program.Sub.gsSel_RowCellClick.Start
+f.Intrinsic.Control.Try
+	v.Local..BulkDeclareString(sError)
+	
+	f.Intrinsic.Control.If(v.Args.Column,=,"Delete")
+		f.Data.DataTable.DeleteRow("Sel",v.Args.RowIndex)
+		f.Data.DataTable.AcceptChanges("Sel")		
+	f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.gsSel_RowCellClick.End
+
+Program.Sub.cmdResetToken_Click.Start
+f.Intrinsic.Control.Try
+	v.Local..BulkDeclareString(sError)
+	
+	F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"ONERUNNING",5891,"2002",False,"",False,0,-999.0,1/1/1980,12:00:00 AM)
+	f.Intrinsic.UI.Msgbox("Reseting done!")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdResetToken_Click.End
+
+
+Program.Sub.cmdResetTokenHelp_Click.Start
+f.Intrinsic.UI.Msgbox("The main program will call a sub-script to process data and unload itself. Before the sub-script starts processing, it puts a token in registry to avoid overlaping issue. When it completes processing, it will delete the token. If for some reason, the sub-script crashes and the token is stuck in the registry, the Administrator can click Reset button to remove the token and reset the project.","Reset Token Usage")
+Program.Sub.cmdResetTokenHelp_Click.End
+
+
+
+
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$0
+${$6$}$bnguyen$}$20200212154802926$}$tqzwddZCkmoVRWHEL6DZymEEseDhOdziCzRbrpTX9LVjuB0e85y3g92ahDJvM5+NxhE1iAizxVM=
+Program.Sub.Comments.End
